@@ -1,7 +1,9 @@
-import * as _window from './window'
+import * as _window2 from './window'
 import document from './document'
 
 const global = GameGlobal
+
+const _window = { ..._window2 };
 
 GameGlobal.global = GameGlobal.global || global
 
