@@ -1,62 +1,52 @@
-import * as _window2 from './window'
-import document from './document'
-
-const global = GameGlobal
+import * as _window2 from './window';
+import document from './document';
 
 const _window = { ..._window2 };
 
-GameGlobal.global = GameGlobal.global || global
+GameGlobal.global = GameGlobal.global || GameGlobal;
 
 function inject() {
-    _window.document = document;
+  _window.document = document;
 
-    _window.addEventListener = (type, listener) => {
-        _window.document.addEventListener(type, listener)
+  _window.addEventListener = _window.document.addEventListener;
+  _window.removeEventListener = _window.document.removeEventListener;
+  _window.dispatchEvent = _window.document.dispatchEvent;
+
+  const { platform } = wx.getSystemInfoSync();
+
+  // 开发者工具无法重定义 window
+  if (platform !== 'devtools') {
+    _window.wx = wx;
+    for (const key in _window) {
+      GameGlobal[key] = _window[key];
     }
-    _window.removeEventListener = (type, listener) => {
-        _window.document.removeEventListener(type, listener)
+    GameGlobal.window = GameGlobal.self = GameGlobal.top = GameGlobal.parent = GameGlobal;
+  } else {
+    for (const key in _window) {
+      const descriptor = Object.getOwnPropertyDescriptor(GameGlobal, key);
+
+      if (!descriptor || descriptor.configurable === true) {
+        Object.defineProperty(window, key, {
+          value: _window[key],
+        });
+      }
     }
-    _window.dispatchEvent = function(event = {}) {
-        console.log('window.dispatchEvent', event.type, event);
-        // nothing to do
+
+    for (const key in _window.document) {
+      const descriptor = Object.getOwnPropertyDescriptor(GameGlobal.document, key);
+
+      if (!descriptor || descriptor.configurable === true) {
+        Object.defineProperty(GameGlobal.document, key, {
+          value: _window.document[key],
+        });
+      }
     }
-
-    const { platform } = wx.getSystemInfoSync()
-
-    // 开发者工具无法重定义 window
-    if (typeof __devtoolssubcontext === 'undefined' && platform === 'devtools') {
-        for (const key in _window) {
-            const descriptor = Object.getOwnPropertyDescriptor(global, key)
-
-            if (!descriptor || descriptor.configurable === true) {
-                Object.defineProperty(window, key, {
-                    value: _window[key]
-                })
-            }
-        }
-
-        for (const key in _window.document) {
-            const descriptor = Object.getOwnPropertyDescriptor(global.document, key)
-
-            if (!descriptor || descriptor.configurable === true) {
-                Object.defineProperty(global.document, key, {
-                    value: _window.document[key]
-                })
-            }
-        }
-        window.parent = window
-        window.wx = wx
-    } else {
-        _window.wx = wx;
-        for (const key in _window) {
-            global[key] = _window[key]
-        }
-        global.window = global
-        global.top = global.parent = global
-    }
+    window.parent = window;
+    window.wx = wx;
+  }
 }
 
 if (!GameGlobal.__isAdapterInjected) {
-    GameGlobal.__isAdapterInjected = true
-    inject()
+  GameGlobal.__isAdapterInjected = true;
+  inject();
 }
